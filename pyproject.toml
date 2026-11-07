@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lakehouse-iceberg-trino"
+version = "0.1.0"
+description = "An open lakehouse: Iceberg tables on S3-compatible storage with a shared JDBC catalog, pyiceberg ingestion, Trino and dbt, verified end to end."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "Darshan Kumar Satpathy" }]
+keywords = ["iceberg", "trino", "lakehouse", "dbt", "minio", "pyiceberg", "cdc", "data-engineering"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Database",
+]
+dependencies = [
+  "pyiceberg[sql-postgres,pyarrow,pyiceberg-core]>=0.10",
+  "psycopg[binary]>=3.1",
+  "trino>=0.330",
+  "dbt-core>=1.10,<1.13",
+  "dbt-trino>=1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "boto3>=1.34",
+  "moto[server]>=5.0",
+  "pip-audit>=2.7",
+]
+
+[project.scripts]
+lh = "lakehouse.cli:main"
+
+[project.urls]
+Repository = "https://github.com/darshansatpathy/lakehouse-iceberg-trino"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lakehouse"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"transform/dbt_project.yml" = "lakehouse/transform/dbt_project.yml"
+"transform/profiles.yml" = "lakehouse/transform/profiles.yml"
+"transform/models" = "lakehouse/transform/models"
+"transform/macros" = "lakehouse/transform/macros"
+"transform/tests" = "lakehouse/transform/tests"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["lakehouse"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "\\.\\.\\."]
+
+[tool.ruff]
+line-length = 150
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = ["S101", "S608"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "S108", "S311"]
+"src/lakehouse/generator.py" = ["S311"]
+"src/lakehouse/bench.py" = ["S311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["lakehouse"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["trino.*", "pyiceberg.*", "pyarrow.*", "boto3.*", "moto.*"]
+ignore_missing_imports = true
