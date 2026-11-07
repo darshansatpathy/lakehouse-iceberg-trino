@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint, types, unit tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: pytest
+
+  stack:
+    name: Stack (MinIO, PostgreSQL catalog, Trino 476), verification and benchmark
+    runs-on: ubuntu-24.04
+    env:
+      LH_INTEGRATION: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Start the stack
+        run: |
+          docker compose up -d postgres minio create-bucket trino
+          scripts/wait-for-trino.sh
+      - name: All tests, including the stack, with coverage
+        run: pytest --cov --cov-report=term-missing --cov-fail-under=90
+      - name: End-to-end verification against an independent reference
+        run: lh verify --check --report verification.md
+      - name: Benchmark
+        run: lh bench --report benchmark.md
+      - name: Reports
+        if: always()
+        run: cat verification.md benchmark.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports
+          path: |
+            verification.md
+            benchmark.md
+      - name: Stack logs
+        if: failure()
+        run: docker compose logs --tail 200
+
+  package:
+    name: Wheel builds and carries the dbt project
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install build && python -m build
+      - name: Install the wheel in a clean environment
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install dist/*.whl
+          cd /tmp
+          /tmp/venv/bin/lh --version
+          /tmp/venv/bin/python -c "from lakehouse.resources import resource; p = resource('transform'); assert (p / 'models' / 'silver' / 'orders.sql').exists(), p"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -e . pip-audit
+      - run: pip-audit --skip-editable
