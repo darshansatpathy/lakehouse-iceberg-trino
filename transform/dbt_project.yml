@@ -1,0 +1,24 @@
+name: lakehouse
+version: "0.1.0"
+config-version: 2
+profile: lakehouse
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+clean-targets: ["target", "logs"]
+
+flags:
+  send_anonymous_usage_stats: false
+  require_certificate_validation: true
+
+models:
+  lakehouse:
+    staging:
+      +schema: staging
+      +materialized: view
+    silver:
+      +schema: silver
+    gold:
+      +schema: gold
+      +materialized: table

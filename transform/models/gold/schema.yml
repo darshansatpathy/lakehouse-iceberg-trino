@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: daily_sales
+    description: Orders, revenue (paid, shipped or delivered) and cancellations per day, channel and country.
+    data_tests:
+      - unique_combination:
+          arguments: {columns: ["order_date", "channel", "country"]}
+  - name: customer_value
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]

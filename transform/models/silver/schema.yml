@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: orders
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments: {values: ["pending", "paid", "shipped", "delivered", "cancelled", "returned"]}
+      - name: customer_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_customers'), field: customer_id}
+  - name: dim_customers
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]

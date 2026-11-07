@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Landed by pyiceberg through the shared JDBC catalog. Append-only.
+    tables:
+      - name: order_events
+        description: CDC events for orders, as delivered (unordered within a batch, some delivered twice).
+      - name: customers
