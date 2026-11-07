@@ -47,7 +47,7 @@ services:
     restart: "no"
 
   trino:
-    image: trinodb/trino:476
+    image: trinodb/trino:484
     depends_on:
       postgres: {condition: service_healthy}
       create-bucket: {condition: service_completed_successfully}
