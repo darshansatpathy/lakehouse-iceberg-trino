@@ -58,7 +58,7 @@ jobs:
       - name: Reports
         if: always()
         run: cat verification.md benchmark.md >> "$GITHUB_STEP_SUMMARY" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: reports
@@ -85,7 +85,7 @@ jobs:
           cd /tmp
           /tmp/venv/bin/lh --version
           /tmp/venv/bin/python -c "from lakehouse.resources import resource; p = resource('transform'); assert (p / 'models' / 'silver' / 'orders.sql').exists(), p"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
